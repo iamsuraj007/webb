@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Will You Marry Me? 💍</title>
+
+  <!-- GSAP for smooth animation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
+
+  <style>
+    :root{
+      --accent1:#ffb0c9;
+      --accent2:#ffd88c;
+      --text:#fff;
+      --glass: rgba(255,255,255,0.06);
+      --radius:18px;
+      font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      min-height:100vh;
+      color:var(--text);
+      background:#05102a;
+      display:flex;align-items:center;justify-content:center;padding:20px;
+      -webkit-font-smoothing:antialiased;
+    }
+
+    /* Background with subtle parallax */
+    .bg {
+      position:fixed;inset:0;z-index:0;overflow:hidden;
+      background-image: url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1900&q=80');
+      background-size:cover;background-position:center;
+      filter:brightness(0.72) saturate(1.05);
+    }
+    .color-overlay {
+      position:fixed;inset:0;z-index:1;
+      background: linear-gradient(120deg, rgba(255,107,154,0.10), rgba(109,93,255,0.06), rgba(255,209,102,0.06));
+      pointer-events:none;
+    }
+
+    /* Main layout */
+    .wrap{position:relative;z-index:5;max-width:980px;width:100%;display:grid;grid-template-columns:1fr 420px;gap:28px;align-items:center}
+    @media (max-width:900px){ .wrap{grid-template-columns:1fr; padding:12px} }
+
+    .card{
+      background:var(--glass);backdrop-filter:blur(8px);padding:28px;border-radius:var(--radius);
+      box-shadow:0 20px 50px rgba(3,6,20,0.6);
+    }
+    h1{font-size:clamp(22px,3.6vw,36px);line-height:1.02;margin-bottom:12px}
+    .lead{color:rgba(255,255,255,0.9);font-size:16px;line-height:1.6;min-height:120px;white-space:pre-wrap}
+
+    .controls{margin-top:16px;display:flex;gap:12px;flex-wrap:wrap}
+    .btn{border:0;padding:12px 16px;border-radius:999px;cursor:pointer;font-weight:800;color:#fff;background:linear-gradient(90deg,var(--accent1),var(--accent2));box-shadow:0 10px 25px rgba(255,107,154,0.12)}
+    .btn.secondary{background:transparent;border:1px solid rgba(255,255,255,0.12);color:var(--text);box-shadow:none}
+
+    .visual{position:relative;border-radius:var(--radius);overflow:hidden;min-height:320px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.06));border:1px solid rgba(255,255,255,0.04)}
+    .ring{max-width:78%;width:100%;transform-origin:center}
+
+    /* Splash (Begin) */
+    .splash{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg, rgba(2,6,23,0.7), rgba(2,6,23,0.45));backdrop-filter:blur(4px)}
+    .splash-card{background:rgba(255,255,255,0.03);padding:28px;border-radius:14px;text-align:center;max-width:540px;box-shadow:0 30px 80px rgba(2,6,23,0.7)}
+    .start{margin-top:14px;padding:12px 20px;border-radius:999px;border:0;background:linear-gradient(90deg,#ff6b9a,#ffd166);font-weight:800;cursor:pointer;color:#111}
+
+    /* Surprise modal */
+    .surprise{position:fixed;inset:0;z-index:12;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center, rgba(0,0,0,0.45), rgba(0,0,0,0.65));opacity:0;pointer-events:none;transition:opacity .4s}
+    .surprise.show{opacity:1;pointer-events:auto}
+    .surprise-inner{width:92%;max-width:760px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:26px;border-radius:12px;text-align:center;backdrop-filter:blur(6px);box-shadow:0 30px 80px rgba(2,6,23,0.7)}
+    .proposal{font-size:clamp(20px,4vw,38px);margin-bottom:10px}
+    .proposal-sub{color:rgba(255,255,255,0.9);margin-bottom:18px}
+    .choices{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+
+    /* Final message */
+    .final{display:flex;flex-direction:column;gap:14px;align-items:center}
+    .final h2{font-size:28px;margin-top:6px}
+
+    /* Confetti canvas and hearts */
+    #confetti{position:fixed;inset:0;z-index:14;pointer-events:none}
+    #hearts{position:fixed;inset:0;z-index:13;pointer-events:none}
+
+    /* accessible outlines */
+    .btn:focus, .start:focus, .choice:focus{outline:3px solid rgba(255,107,154,0.16);outline-offset:4px}
+  </style>
+</head>
+<body>
+
+  <!-- Background layers -->
+  <div class="bg" id="bg"></div>
+  <div class="color-overlay" aria-hidden="true"></div>
+
+  <!-- Confetti & hearts canvas -->
+  <canvas id="confetti" aria-hidden="true"></canvas>
+  <div id="hearts" aria-hidden="true"></div>
+
+  <!-- Main content -->
+  <div class="wrap" role="main" aria-labelledby="title">
+    <div class="card" aria-live="polite">
+      <h1 id="title">A very special question for Palak</h1>
+      <div id="lead" class="lead"></div>
+
+      <div class="controls">
+        <button class="btn" id="prepare">Prepare the Surprise</button>
+        <button class="btn secondary" id="preview">Preview Ring</button>
+      </div>
+      <div style="margin-top:10px;color:rgba(255,255,255,0.7);font-size:13px">Tip: Tap <strong>Prepare the Surprise</strong> then tap the glowing button to reveal the proposal.</div>
+    </div>
+
+    <div class="visual" aria-hidden="true">
+      <img id="ring" class="ring" src="music/Ring-PNG-Clipart.png" alt="engagement ring"/>
+    </div>
+  </div>
+
+  <!-- Splash screen (Begin) -->
+  <div class="splash" id="splash" role="dialog" aria-modal="true" aria-labelledby="welcome">
+    <div class="splash-card">
+      <h2 id="welcome">A beautiful moment is ready</h2>
+      <p style="color:rgba(255,255,255,0.9);margin-top:8px">When you and Palak are ready, tap <strong>Begin</strong> so we can start the surprise (audio will play after your tap).</p>
+      <button class="start" id="begin">Begin</button>
+    </div>
+  </div>
+
+  <!-- Surprise modal (proposal) -->
+  <div class="surprise" id="surprise" aria-hidden="true">
+    <div class="surprise-inner" role="dialog" aria-modal="true" aria-labelledby="proposalTitle">
+      <div id="proposalTitle" class="proposal">Palak — will you marry me?</div>
+      <div class="proposal-sub">You are my today, my tomorrow, and my forever.</div>
+      <div class="choices">
+        <button class="btn choice" id="yes">Yes! 💖</button>
+        <button class="btn secondary choice" id="maybe">Maybe — Tell me more</button>
+      </div>
+
+      <!-- final message container -->
+      <div id="finalContainer" style="margin-top:18px;display:none" class="final" aria-live="polite">
+        <h2>She said yes! 💍</h2>
+        <p style="max-width:600px;color:rgba(255,255,255,0.9)">Thank you for making this moment unforgettable. I will love you forever — let's celebrate this new chapter together.</p>
+        <button class="btn" id="shareBtn">Save this moment</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio (play only after user gesture) -->
+  <audio id="music" loop preload="auto">
+    <source src="music/Untitled video - Made with Clipchamp.m4a" type="audio/mpeg">
+  </audio>
+  <audio id="chime" preload="auto">
+    <source src="" type="audio/mpeg">
+  </audio>
+
+  <script>
+  // ========== DOM refs ==========
+  const splash = document.getElementById('splash');
+  const begin = document.getElementById('begin');
+  const prepare = document.getElementById('prepare');
+  const preview = document.getElementById('preview');
+  const lead = document.getElementById('lead');
+  const surprise = document.getElementById('surprise');
+  const yes = document.getElementById('yes');
+  const maybe = document.getElementById('maybe');
+  const finalContainer = document.getElementById('finalContainer');
+  const music = document.getElementById('music');
+  const chime = document.getElementById('chime');
+  const confettiCanvas = document.getElementById('confetti');
+  const heartsLayer = document.getElementById('hearts');
+  const bg = document.getElementById('bg');
+
+  // Resize canvases for crispness
+  function resize() {
+    [confettiCanvas].forEach(c=>{
+      c.width = innerWidth * devicePixelRatio;
+      c.height = innerHeight * devicePixelRatio;
+      c.style.width = innerWidth + 'px';
+      c.style.height = innerHeight + 'px';
+      const ctx = c.getContext('2d');
+      if(ctx) ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+    });
+  }
+  addEventListener('resize', resize);
+  resize();
+
+  // Simple parallax for background on mouse move
+  let mx = 0, my = 0;
+  addEventListener('mousemove', e=>{
+    mx = (e.clientX - innerWidth/2)/(innerWidth/2);
+    my = (e.clientY - innerHeight/2)/(innerHeight/2);
+    gsap.to(bg, {duration:1.6, x: mx*20, y: my*12, scale:1.02, ease:'power3.out'});
+  });
+
+  // Typewriter lines
+  const lines = [
+    "Palak —",
+    "From the moment you walked into my life, everything felt brighter.",
+    "You are my laughter, my safe place, my best friend.",
+    "Today I want to ask the most important question."
+  ];
+  function typeWriterLines(target, arr, cb){
+    let idx = 0;
+    function nextLine(){
+      if(idx >= arr.length){ cb && cb(); return; }
+      const p = document.createElement('div');
+      p.style.opacity = 0;
+      target.appendChild(p);
+      const text = arr[idx++];
+      let k = 0;
+      gsap.to(p, {opacity:1, duration:0.45});
+      const interval = setInterval(()=>{
+        p.textContent += text[k++] || '';
+        if(k > text.length){
+          clearInterval(interval);
+          setTimeout(nextLine, 380);
+        }
+      }, 30);
+    }
+    nextLine();
+  }
+
+  // Begin button: hides splash and starts ambience
+  begin.addEventListener('click', async ()=>{
+    try{ await music.play(); }catch(e){}
+    gsap.to(splash, {opacity:0, duration:0.6, onComplete: ()=> splash.style.display='none'});
+    // bring in small intro
+    gsap.from(".card", {y:18, opacity:0, duration:1, stagger:0.06, ease:'power3.out'});
+    gsap.from(".visual", {scale:0.98, opacity:0, duration:0.9, ease:'power3.out'});
+  });
+
+  // Prepare Surprise: staged reveal of lead text then reveal proposal button
+  prepare.addEventListener('click', ()=>{
+    chime.currentTime = 0; chime.play().catch(()=>{});
+    // clear old
+    lead.innerHTML = '';
+    // animate card pulse
+    gsap.fromTo('.card', {scale:1}, {scale:1.02, duration:0.12, yoyo:true, repeat:1});
+    // type lines then open surprise
+    typeWriterLines(lead, lines, ()=> {
+      // small delay then reveal
+      gsap.to({}, {duration:0.7, onComplete: ()=> showProposal()});
+    });
+  });
+
+  // Preview ring bounce
+  preview.addEventListener('click', ()=>{
+    const ring = document.getElementById('ring');
+    gsap.fromTo(ring, {scale:0.9, rotation:-8}, {scale:1.03, rotation:0, duration:0.9, ease:'elastic.out(1,0.7)'});
+    chime.currentTime = 0; chime.play().catch(()=>{});
+  });
+
+  // Show proposal modal
+  function showProposal(){
+    surprise.classList.add('show');
+    surprise.setAttribute('aria-hidden','false');
+    gsap.fromTo('.surprise-inner', {y:40, opacity:0}, {y:0, opacity:1, duration:0.9, ease:'expo.out'});
+    chime.currentTime = 0; chime.play().catch(()=>{});
+  }
+
+  // heart DOM burst
+  function spawnHearts(count = 30){
+    for(let i=0;i<count;i++){
+      const d = document.createElement('div');
+      d.textContent = '❤';
+      d.style.position = 'absolute';
+      d.style.left = (40 + (Math.random()-0.5)*60) + '%';
+      d.style.top = (50 + (Math.random()-0.5)*40) + '%';
+      d.style.fontSize = (12 + Math.random()*28) + 'px';
+      d.style.opacity = '1';
+      d.style.transform = 'translate(-50%,-50%)';
+      heartsLayer.appendChild(d);
+      gsap.to(d, {y: -150 - Math.random()*200, x:(Math.random()-0.5)*400, rotation: (Math.random()-0.5)*180, opacity:0, duration:1.6 + Math.random()*1.2, ease:'power2.out', onComplete: ()=> d.remove()});
+    }
+  }
+
+  // Confetti (lightweight) - squares
+  function runConfetti(){
+    const c = confettiCanvas;
+    const ctx = c.getContext('2d');
+    const w = c.width / devicePixelRatio;
+    const h = c.height / devicePixelRatio;
+    const pieces = [];
+    const colors = ["#ff6b9a","#ffd166","#6b5bff","#ffffff"];
+    const count = 120;
+    for(let i=0;i<count;i++){
+      pieces.push({
+        x: Math.random()*w,
+        y: Math.random()* -h,
+        vx: (Math.random()-0.5)*6,
+        vy: Math.random()*6 + 2,
+        s: 6 + Math.random()*8,
+        color: colors[Math.floor(Math.random()*colors.length)],
+        rot: Math.random()*360,
+        rotSpeed: (Math.random()-0.5)*8
+      });
+    }
+    let t0 = performance.now();
+    function frame(now){
+      const dt = Math.min(40, now - t0) / 16.666; t0 = now;
+      ctx.clearRect(0,0,c.width,c.height);
+      for(const p of pieces){
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 0.08*dt;
+        p.rot += p.rotSpeed * dt;
+        ctx.save();
+        ctx.translate(p.x*devicePixelRatio, p.y*devicePixelRatio);
+        ctx.rotate(p.rot * Math.PI/180);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.s*devicePixelRatio/2, -p.s*devicePixelRatio/2, p.s*devicePixelRatio, p.s*devicePixelRatio);
+        ctx.restore();
+      }
+      if(pieces.some(p=>p.y < h + 100)) requestAnimationFrame(frame);
+      else ctx.clearRect(0,0,c.width,c.height);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // Yes behaviour: final message, confetti, hearts, ring sparkle
+  yes.addEventListener('click', async ()=>{
+    // play sounds and music
+    try{ await music.play(); }catch(e){}
+    chime.currentTime = 0; chime.play().catch(()=>{});
+    // hearts + confetti
+    spawnHearts(70);
+    runConfetti();
+    // ring pulse
+    gsap.fromTo('#ring', {scale:0.95, rotation:-8}, {scale:1.08, rotation:0, duration:1.2, ease:'elastic.out(1,0.6)'});
+    // screen celebration
+    const title = document.getElementById('proposalTitle');
+    title.textContent = "She said YES! 💍";
+    // show final container
+    finalContainer.style.display = 'flex';
+    gsap.fromTo(finalContainer, {y:20, opacity:0}, {y:0, opacity:1, duration:0.9, ease:'power3.out'});
+    // small shake
+    gsap.fromTo('body', {x:0}, {x:8, duration:0.06, yoyo:true, repeat:4, clearProps:'x'});
+  });
+
+  maybe.addEventListener('click', ()=>{
+    maybe.textContent = "Tell me what's on your mind";
+    gsap.fromTo(maybe, {scale:1}, {scale:1.04, duration:0.12, yoyo:true, repeat:1});
+    spawnHearts(18);
+  });
+
+  // share/save button - simple local download of a small text keepsake
+  document.getElementById('shareBtn').addEventListener('click', ()=>{
+    const text = "Palak said YES! 💍\nA new chapter begins — love forever.";
+    const blob = new Blob([text], {type:'text/plain'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'palak-said-yes.txt';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  // Keep splash visible until user taps Begin (best for mobile audio)
+  // but allow ESC to dismiss
+  addEventListener('keydown', (e)=>{
+    if(e.key === 'Escape'){ if(splash) splash.style.display = 'none'; }
+    if(e.key === 'Enter'){ if(splash && splash.style.display !== 'none') begin.click(); }
+  });
+  </script>
+</body>
+</html>
